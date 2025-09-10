@@ -202,7 +202,7 @@ function buildProjetos(sections, outros) {
     card.setAttribute('data-tilt-speed', '400');
     const parallaxDepth = 8 + Math.round(Math.random() * 16);
     card.innerHTML = `
-      <div class="thumb">${p.img ? `<img src="${p.img}" alt="${p.title}">` : '<span>Sem imagem</span>'}</div>
+      <div class="thumb">${p.img ? `<img src="${p.img}" alt="${p.title}" loading="lazy">` : '<span>Sem imagem</span>'}</div>
       <div class="body">
         <h3>${p.title}</h3>
         <div class="excerpt">${p.resumo || '—'}</div>
@@ -273,6 +273,25 @@ function buildProjetos(sections, outros) {
     outrosEl.innerHTML = mdRender(outros.body);
     grid.parentElement.appendChild(outrosEl);
   }
+
+  // Masonry sizing for CSS Grid (span rows based on height)
+  function resizeMasonry() {
+    const style = getComputedStyle(grid);
+    const row = parseInt(style.getPropertyValue('grid-auto-rows')) || 8;
+    const gap = parseInt(style.getPropertyValue('gap')) || 0;
+    grid.querySelectorAll('.card').forEach((card) => {
+      card.style.gridRowEnd = 'span 1';
+      const h = card.getBoundingClientRect().height;
+      const span = Math.ceil((h + gap) / (row + gap));
+      card.style.gridRowEnd = `span ${span}`;
+    });
+  }
+  // Run after images load
+  const imgs = grid.querySelectorAll('.card .thumb img');
+  let loaded = 0; const tryResize = () => { loaded++; if (loaded >= imgs.length) resizeMasonry(); };
+  if (imgs.length) imgs.forEach((im) => { if (im.complete) tryResize(); else im.addEventListener('load', tryResize); });
+  else resizeMasonry();
+  window.addEventListener('resize', () => { resizeMasonry(); });
 }
 
 function buildFromMarkdown(md) {
