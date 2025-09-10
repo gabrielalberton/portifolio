@@ -64,35 +64,38 @@ document.querySelectorAll('.section-head').forEach((el) => {
   gsap.from(el, { scrollTrigger: { trigger: el, start: 'top 85%' }, y: 18, opacity: 0, duration: 0.6, ease: 'power2.out' });
 });
 
-// Parse and build from Markdown (supports md/portfolio-*.md concatenation)
+// Parse and build from Markdown (prefere portfolio.md; fallback md/portfolio-*.md)
 async function loadMarkdown() {
-  const parts = [];
+  // 1) Try single portfolio.md first (more conveniente para edições rápidas)
   try {
-    for (let i = 1; i <= 10; i++) {
-      const url = `md/portfolio-${i}.md`;
-      try {
-        const res = await fetch(url, { cache: 'no-cache' });
-        if (!res.ok) { if (i === 1) throw new Error('first-part-missing'); break; }
-        parts.push(await res.text());
-      } catch (err) {
-        if (i === 1) throw err; else break;
-      }
-    }
-    if (parts.length) {
-      buildFromMarkdown(parts.join("\n\n"));
-      return;
-    }
-  } catch (e) {
-    try {
-      const res = await fetch('portfolio.md', { cache: 'no-cache' });
-      if (res.ok) {
-        buildFromMarkdown(await res.text());
+    const res = await fetch('portfolio.md', { cache: 'no-cache' });
+    if (res.ok) {
+      const text = await res.text();
+      if (/#\s+/.test(text) && text.trim().length > 40) {
+        buildFromMarkdown(text);
         return;
       }
-    } catch (_) {}
-    console.warn('Falha ao carregar md/portfolio-*.md e portfolio.md. Usando placeholder.');
-    buildFromMarkdown(`# DADOS INSTITUCIONAIS\n\n## Introdução\nA Cogmo Technology aplica IA com rigor.\n\n# Bot de Cobrança via WhatsApp com IA\n![alt](wpp-bot.png)\n## Resumo\nSolução conversacional empática que acelera regularização com menor custo.`);
+    }
+  } catch {}
+
+  // 2) Fallback: md parts concatenation
+  const parts = [];
+  for (let i = 1; i <= 10; i++) {
+    const url = `md/portfolio-${i}.md`;
+    try {
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (!res.ok) break;
+      parts.push(await res.text());
+    } catch { break; }
   }
+  if (parts.length) {
+    buildFromMarkdown(parts.join("\n\n"));
+    return;
+  }
+
+  // 3) Placeholder
+  console.warn('Falha ao carregar markdown. Usando placeholder.');
+  buildFromMarkdown(`# DADOS INSTITUCIONAIS\n\n## Introdução\nA Cogmo Technology aplica IA com rigor.\n\n# Bot de Cobrança via WhatsApp com IA\n![alt](wpp-bot.png)\n## Resumo\nSolução conversacional empática que acelera regularização com menor custo.`);
 }
 
 function splitTopSections(md) {
@@ -164,7 +167,7 @@ function buildEmpresa(companyBody) {
   });
 }
 
-function buildProjetos(sections) {
+function buildProjetos(sections, outros) {
   const grid = document.getElementById('projetos-grid');
   const detailsRoot = document.getElementById('projetos-detalhes');
   const overlay = document.createElement('div');
@@ -262,6 +265,14 @@ function buildProjetos(sections) {
       }
     });
   });
+
+  // Append "E outros" as a full-width block after grid
+  if (outros && outros.body) {
+    const outrosEl = document.createElement('div');
+    outrosEl.className = 'projetos-outros';
+    outrosEl.innerHTML = mdRender(outros.body);
+    grid.parentElement.appendChild(outrosEl);
+  }
 }
 
 function buildFromMarkdown(md) {
@@ -272,8 +283,13 @@ function buildFromMarkdown(md) {
   const company = companyIdx >= 0 ? sections.splice(companyIdx, 1)[0] : sections.shift();
   buildEmpresa(company.body || '');
 
-  // Remaining sections considered projects; filter out generic endings like "E outros" if present and still include as a project detail
-  buildProjetos(sections);
+  // Separate "E outros" to render as full-width text after cards
+  let outros = null;
+  const iOutros = sections.findIndex(s => /^E\s+outros/i.test(s.title));
+  if (iOutros >= 0) outros = sections.splice(iOutros, 1)[0];
+
+  // Remaining sections considered projects
+  buildProjetos(sections, outros);
 }
 
 // Kickoff

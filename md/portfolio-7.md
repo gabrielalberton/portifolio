@@ -1,4 +1,5 @@
 # Sistema de IA para Previsão de Enchentes — Itajaí‑çu (Blumenau)
+![alt text](previsor.png)
 
 ## resumo
 
