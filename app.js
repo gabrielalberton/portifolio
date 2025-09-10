@@ -96,12 +96,15 @@ async function loadMarkdown() {
 }
 
 function splitTopSections(md) {
-  const parts = md.split(/\n(?=#\s)/g).filter(Boolean);
-  return parts.map((block) => {
-    const m = block.match(/^#\s+(.+?)\s*\n([\s\S]*)$/);
-    if (!m) return null;
-    return { title: m[1].trim(), body: m[2] };
-  }).filter(Boolean);
+  const sections = [];
+  const re = /(^|\n)#[ \t]+(.+?)\s*\n([\s\S]*?)(?=\n#[ \t]+|$)/g;
+  let m;
+  while ((m = re.exec(md)) !== null) {
+    const title = m[2].trim();
+    const body = m[3].trim();
+    sections.push({ title, body });
+  }
+  return sections;
 }
 
 function extractImage(markdown) {
@@ -178,6 +181,15 @@ function buildProjetos(sections) {
       html: mdRender(`# ${title}\n\n${body}`),
     };
   });
+
+  if (!projects.length) {
+    const warn = document.createElement('div');
+    warn.style.color = 'var(--muted)';
+    warn.style.padding = '8px';
+    warn.textContent = 'Nenhum projeto encontrado. Verifique os arquivos em md/ ou portfolio.md.';
+    grid.appendChild(warn);
+    return;
+  }
 
   projects.forEach((p, i) => {
     const card = document.createElement('article');
