@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cogmo Technology — Portfólio</title>
+    <meta name="theme-color" content="#0b0f1a" />
+    <meta name="description" content="Cogmo Technology — IA aplicada com rigor, do laboratório à operação." />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Animation/UX Libraries -->
+    <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.38/bundled/lenis.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+  </head>
+  <body>
+    <canvas id="bg-stars" aria-hidden="true"></canvas>
+
+    <header class="site-header">
+      <div class="brand">
+        <div class="logo-glow"></div>
+        <span>Cogmo Technology</span>
+      </div>
+      <nav>
+        <a href="#hero">Início</a>
+        <a href="#empresa">Empresa</a>
+        <a href="#projetos">Projetos</a>
+        <a href="#contato">Contato</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="hero" class="section hero">
+        <div class="hero-inner">
+          <h1 class="mega">IA, com rigor e impacto real.</h1>
+          <p class="subtitle">Do laboratório à operação — visão computacional, NLP e agentes conversacionais que entregam valor.</p>
+          <div class="chips">
+            <span class="chip">Visão Computacional</span>
+            <span class="chip">NLP</span>
+            <span class="chip">LLMs</span>
+            <span class="chip">Conversational UX</span>
+            <span class="chip">PD&I</span>
+          </div>
+          <a class="cta" href="#projetos">Explorar Portfólio</a>
+        </div>
+        <div class="hero-orb" aria-hidden="true"></div>
+      </section>
+
+      <section id="empresa" class="section empresa">
+        <div class="section-head">
+          <h2>Sobre a Cogmo</h2>
+          <p>Excelência técnica, equipe enxuta e obsessão por entregar.</p>
+        </div>
+        <div id="empresa-accordions" class="accordions"></div>
+      </section>
+
+      <section id="projetos" class="section projetos">
+        <div class="section-head">
+          <h2>Projetos Selecionados</h2>
+          <p>Casos que combinam IA aplicada, métricas e operação.</p>
+        </div>
+        <div id="projetos-grid" class="projetos-grid"></div>
+      </section>
+
+      <section id="projetos-detalhes" class="section projetos-detalhes"></section>
+
+      <section id="contato" class="section contato">
+        <div class="contact-card" data-tilt data-tilt-max="8" data-tilt-speed="400">
+          <h3>Pronto para construir?</h3>
+          <p>Vamos aplicar IA onde há ROI claro, com pilotos mensuráveis e escala responsável.</p>
+          <a class="cta secondary" href="mailto:hello@cogmo.ai">hello@cogmo.ai</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© Cogmo Technology — IA com propósito</span>
+      <span>Feito com GSAP, Lenis, Marked</span>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+  </html>
+

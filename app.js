@@ -1,0 +1,254 @@
+// Smooth scroll (Lenis)
+const lenis = new Lenis({
+  duration: 1.1,
+  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+});
+function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+requestAnimationFrame(raf);
+
+// GSAP plugins
+gsap.registerPlugin(ScrollTrigger);
+
+// Canvas starfield background
+(function () {
+  const canvas = document.getElementById('bg-stars');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize); resize();
+  function makeStars(n = 200) {
+    stars = Array.from({ length: n }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      z: Math.random() * 0.8 + 0.2,
+      r: Math.random() * 1.4 + 0.3,
+    }));
+  }
+  makeStars(260);
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const alpha = 0.35 + 0.65 * s.z;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+      // Parallax drift
+      s.x += 0.02 * s.z; s.y += 0.015 * s.z;
+      if (s.x > W) s.x = 0; if (s.y > H) s.y = 0;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Reveal animations
+gsap.from('.mega', { y: 20, opacity: 0, duration: 0.8, ease: 'power3.out' });
+gsap.from('.chip', { y: 12, opacity: 0, duration: 0.6, stagger: 0.06, delay: 0.2, ease: 'power3.out' });
+gsap.to('.hero-orb', { yPercent: 12, scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
+
+// Scroll reveals
+document.querySelectorAll('.section-head').forEach((el) => {
+  gsap.from(el, { scrollTrigger: { trigger: el, start: 'top 85%' }, y: 18, opacity: 0, duration: 0.6, ease: 'power2.out' });
+});
+
+// Parse and build from Markdown (supports md/portfolio-*.md concatenation)
+async function loadMarkdown() {
+  const parts = [];
+  try {
+    for (let i = 1; i <= 10; i++) {
+      const url = `md/portfolio-${i}.md`;
+      try {
+        const res = await fetch(url, { cache: 'no-cache' });
+        if (!res.ok) { if (i === 1) throw new Error('first-part-missing'); break; }
+        parts.push(await res.text());
+      } catch (err) {
+        if (i === 1) throw err; else break;
+      }
+    }
+    if (parts.length) {
+      buildFromMarkdown(parts.join("\n\n"));
+      return;
+    }
+  } catch (e) {
+    try {
+      const res = await fetch('portfolio.md', { cache: 'no-cache' });
+      if (res.ok) {
+        buildFromMarkdown(await res.text());
+        return;
+      }
+    } catch (_) {}
+    console.warn('Falha ao carregar md/portfolio-*.md e portfolio.md. Usando placeholder.');
+    buildFromMarkdown(`# DADOS INSTITUCIONAIS\n\n## Introdução\nA Cogmo Technology aplica IA com rigor.\n\n# Bot de Cobrança via WhatsApp com IA\n![alt](wpp-bot.png)\n## Resumo\nSolução conversacional empática que acelera regularização com menor custo.`);
+  }
+}
+
+function splitTopSections(md) {
+  const parts = md.split(/\n(?=#\s)/g).filter(Boolean);
+  return parts.map((block) => {
+    const m = block.match(/^#\s+(.+?)\s*\n([\s\S]*)$/);
+    if (!m) return null;
+    return { title: m[1].trim(), body: m[2] };
+  }).filter(Boolean);
+}
+
+function extractImage(markdown) {
+  const m = markdown.match(/!\[[^\]]*\]\(([^)]+)\)/);
+  return m ? m[1] : null;
+}
+
+function extractResumo(markdown) {
+  const m = markdown.match(/##\s*resumo?|##\s*Resumo([\s\S]*?)(?=\n##\s|$)/i);
+  if (m && m[1]) return m[1].trim();
+  return null;
+}
+
+function buildEmpresa(companyBody) {
+  const container = document.getElementById('empresa-accordions');
+  // Split by level-2 headings
+  const items = companyBody.split(/\n(?=##\s)/g).filter(Boolean);
+  items.forEach((raw, idx) => {
+    const m = raw.match(/^##\s+(.+?)\s*\n([\s\S]*)$/);
+    if (!m) return;
+    const [_, title, content] = m;
+    const item = document.createElement('div');
+    item.className = 'acc-item';
+    item.innerHTML = `
+      <button class="acc-btn" aria-expanded="${idx === 0 ? 'true' : 'false'}">
+        <strong>${title}</strong>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="acc-panel"><div class="acc-panel-inner">${marked.parse(content)}</div></div>
+    `;
+    container.appendChild(item);
+  });
+  // Setup accordion heights
+  container.querySelectorAll('.acc-item').forEach((it, idx) => {
+    const btn = it.querySelector('.acc-btn');
+    const panel = it.querySelector('.acc-panel');
+    function setHeight(open) {
+      if (open) {
+        panel.style.height = panel.firstElementChild.scrollHeight + 'px';
+      } else {
+        panel.style.height = '0px';
+      }
+    }
+    setHeight(idx === 0);
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      setHeight(!expanded);
+    });
+  });
+}
+
+function buildProjetos(sections) {
+  const grid = document.getElementById('projetos-grid');
+  const detailsRoot = document.getElementById('projetos-detalhes');
+  const overlay = document.createElement('div');
+  overlay.className = 'detail-overlay';
+  document.body.appendChild(overlay);
+
+  const projects = sections.map(({ title, body }) => {
+    const img = extractImage(body);
+    const resumo = extractResumo(body);
+    return {
+      title,
+      img,
+      resumo: resumo ? marked.parse(resumo) : '',
+      html: marked.parse(`# ${title}\n\n${body}`),
+    };
+  });
+
+  projects.forEach((p, i) => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.setAttribute('data-tilt', '');
+    card.setAttribute('data-tilt-max', '8');
+    card.setAttribute('data-tilt-speed', '400');
+    const parallaxDepth = 8 + Math.round(Math.random() * 16);
+    card.innerHTML = `
+      <div class="thumb">${p.img ? `<img src="${p.img}" alt="${p.title}">` : '<span>Sem imagem</span>'}</div>
+      <div class="body">
+        <h3>${p.title}</h3>
+        <div class="excerpt">${p.resumo || '—'}</div>
+        <a class="more" href="#">Ver detalhes →</a>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // Detail view element
+    const detail = document.createElement('section');
+    detail.className = 'detail';
+    detail.innerHTML = `
+      <header>
+        <h3>${p.title}</h3>
+        <button class="btn-close" aria-label="Fechar">Fechar</button>
+      </header>
+      <div class="content">${p.html}</div>
+    `;
+    detailsRoot.appendChild(detail);
+
+    const open = (e) => {
+      e?.preventDefault();
+      overlay.style.display = 'block';
+      detail.style.display = 'block';
+      gsap.fromTo(detail, { y: 20, opacity: 0 }, { duration: 0.35, y: 0, opacity: 1, ease: 'power2.out' });
+    };
+    const close = () => {
+      gsap.to(detail, { duration: 0.25, y: 10, opacity: 0, ease: 'power2.in', onComplete: () => {
+        detail.style.display = 'none'; overlay.style.display = 'none';
+      }});
+    };
+    card.querySelector('.more').addEventListener('click', open);
+    detail.querySelector('.btn-close').addEventListener('click', close);
+    overlay.addEventListener('click', close);
+  });
+
+  // Tilt
+  VanillaTilt.init(document.querySelectorAll('.card'));
+
+  // Reveal cards
+  gsap.from('.card', {
+    scrollTrigger: { trigger: grid, start: 'top 85%' },
+    y: 18,
+    opacity: 0,
+    duration: 0.6,
+    stagger: 0.06,
+    ease: 'power2.out'
+  });
+
+  // Parallax inside thumbs
+  document.querySelectorAll('.card .thumb img').forEach((img) => {
+    gsap.to(img, {
+      yPercent: -12,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: img.closest('.card'),
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: true,
+      }
+    });
+  });
+}
+
+function buildFromMarkdown(md) {
+  const sections = splitTopSections(md);
+  if (!sections.length) return;
+  // Company section = title includes DADOS INSTITUCIONAIS or first section
+  const companyIdx = sections.findIndex(s => /DADOS\s+INSTITUCIONAIS/i.test(s.title));
+  const company = companyIdx >= 0 ? sections.splice(companyIdx, 1)[0] : sections.shift();
+  buildEmpresa(company.body || '');
+
+  // Remaining sections considered projects; filter out generic endings like "E outros" if present and still include as a project detail
+  buildProjetos(sections);
+}
+
+// Kickoff
+loadMarkdown();
