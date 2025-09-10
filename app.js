@@ -1,13 +1,22 @@
-// Smooth scroll (Lenis)
-const lenis = new Lenis({
-  duration: 1.1,
-  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-});
-function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-requestAnimationFrame(raf);
+// Boot after DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+  // Smooth scroll (Lenis) — guard if missing
+  let lenis = null;
+  try {
+    if (window.Lenis) {
+      lenis = new window.Lenis({
+        duration: 1.1,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
+      const raf = (time) => { lenis.raf(time); requestAnimationFrame(raf); };
+      requestAnimationFrame(raf);
+    }
+  } catch {}
 
-// GSAP plugins
-gsap.registerPlugin(ScrollTrigger);
+  // GSAP plugins — guard if missing
+  const hasGSAP = typeof window.gsap !== 'undefined';
+  const gs = hasGSAP ? window.gsap : { from: () => {}, to: () => {}, fromTo: () => {} };
+  try { if (hasGSAP && window.ScrollTrigger) gs.registerPlugin(window.ScrollTrigger); } catch {}
 
 // Canvas starfield background
 (function () {
@@ -46,9 +55,9 @@ gsap.registerPlugin(ScrollTrigger);
 })();
 
 // Reveal animations
-gsap.from('.mega', { y: 20, opacity: 0, duration: 0.8, ease: 'power3.out' });
-gsap.from('.chip', { y: 12, opacity: 0, duration: 0.6, stagger: 0.06, delay: 0.2, ease: 'power3.out' });
-gsap.to('.hero-orb', { yPercent: 12, scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
+gs.from('.mega', { y: 20, opacity: 0, duration: 0.8, ease: 'power3.out' });
+gs.from('.chip', { y: 12, opacity: 0, duration: 0.6, stagger: 0.06, delay: 0.2, ease: 'power3.out' });
+gs.to('.hero-orb', { yPercent: 12, scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
 
 // Scroll reveals
 document.querySelectorAll('.section-head').forEach((el) => {
@@ -101,9 +110,14 @@ function extractImage(markdown) {
 }
 
 function extractResumo(markdown) {
-  const m = markdown.match(/##\s*resumo?|##\s*Resumo([\s\S]*?)(?=\n##\s|$)/i);
-  if (m && m[1]) return m[1].trim();
-  return null;
+  const m = markdown.match(/##\s*resumo\s*([\s\S]*?)(?=\n##\s|$)/i);
+  return m ? m[1].trim() : null;
+}
+
+function mdRender(text) {
+  try { if (window.marked && typeof window.marked.parse === 'function') return window.marked.parse(text); } catch {}
+  // Fallback: minimal line breaks
+  return text.replace(/\n\n/g, '</p><p>').replace(/^/,'<p>').replace(/$/,'</p>').replace(/\n/g, '<br>');
 }
 
 function buildEmpresa(companyBody) {
@@ -123,7 +137,7 @@ function buildEmpresa(companyBody) {
           <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
-      <div class="acc-panel"><div class="acc-panel-inner">${marked.parse(content)}</div></div>
+      <div class="acc-panel"><div class="acc-panel-inner">${mdRender(content)}</div></div>
     `;
     container.appendChild(item);
   });
@@ -160,8 +174,8 @@ function buildProjetos(sections) {
     return {
       title,
       img,
-      resumo: resumo ? marked.parse(resumo) : '',
-      html: marked.parse(`# ${title}\n\n${body}`),
+      resumo: resumo ? mdRender(resumo) : '',
+      html: mdRender(`# ${title}\n\n${body}`),
     };
   });
 
@@ -211,10 +225,10 @@ function buildProjetos(sections) {
   });
 
   // Tilt
-  VanillaTilt.init(document.querySelectorAll('.card'));
+  try { if (window.VanillaTilt) window.VanillaTilt.init(document.querySelectorAll('.card')); } catch {}
 
   // Reveal cards
-  gsap.from('.card', {
+  gs.from('.card', {
     scrollTrigger: { trigger: grid, start: 'top 85%' },
     y: 18,
     opacity: 0,
@@ -225,7 +239,7 @@ function buildProjetos(sections) {
 
   // Parallax inside thumbs
   document.querySelectorAll('.card .thumb img').forEach((img) => {
-    gsap.to(img, {
+    gs.to(img, {
       yPercent: -12,
       ease: 'none',
       scrollTrigger: {
@@ -252,3 +266,4 @@ function buildFromMarkdown(md) {
 
 // Kickoff
 loadMarkdown();
+});
